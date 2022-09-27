@@ -20,15 +20,18 @@ const bindKey: any[] = []
 const posOffset = {x: 4, y: -4};
 
 const letters = [
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'H', 
-  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'S', 'Y', 'Z'];
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 
+  'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 
+  'U', 'V', 'W', 'X', 'Y', 'Z'];
 
+let keyStroke: string[] = [];
+
+const links: any[] = [];
 
 function main() {
   console.info(`#${pluginId}: MAIN`);
   const root = ReactDOM.createRoot(document.getElementById("app")!);
 
-  const links: any[] = [];
 
   root.render(
     <React.StrictMode>
@@ -80,6 +83,9 @@ function main() {
       },
     },
     async () => {
+
+      keyStroke = [];
+
       // @ts-ignore
       const block = await logseq.Editor.getCurrentBlock();
       logseq.showMainUI()
@@ -100,14 +106,6 @@ function main() {
 
       linkElements?.forEach(async (el, idx) => {
         const rect = el.getBoundingClientRect();
-        if(step1 > 25) {
-          step1 = 0;
-          ++step2;
-          if(step2 > 25) {
-            console.error('Expection: Run out of letters!');
-          }
-        }
-
         if(!links.find(link => link.element === el)) {
           let validate = true;
 
@@ -125,8 +123,17 @@ function main() {
           }
 
           if(validate) {
+            if(step1 > 25) {
+              step1 = 0;
+              ++step2;
+              if(step2 > 25) {
+                console.error('Expection: Run out of letters!');
+              }
+            }
+            const key = `${letters[step1++]}${letters[step2]}`;
+            console.log(key);
             links.push({
-              key: `${letters[step1++]}${letters[step2]}`,
+              key,
               id: idx, 
               pos: {
                 left: Math.round(rect.left + posOffset.x), 
@@ -156,6 +163,26 @@ async function startKeyListen() {
 
 function keyEventHandler(e: KeyboardEvent){
   console.log('DEBUG >> keyEventHandler', e);
+  
+  if(e.keyCode === 27 || e.code === 'Escape') {
+    logseq.hideMainUI();
+  }
+
+  keyStroke.push(e.key);
+  console.log('DEBUG >> keyStroke', keyStroke);
+  if(keyStroke.length === 2) {
+    const code = keyStroke[0] as string + keyStroke[1];
+    console.log('DEBUG >> code', code);
+    links.forEach(link => {
+      if(link.key === code.toUpperCase()) {
+        logseq.hideMainUI();
+        link.element.click();
+        console.log('DEBUG >> click on ', link);
+      }
+    })
+
+    keyStroke = [];
+  }
 }
 
 /**
